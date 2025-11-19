@@ -1,7 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static org.firstinspires.ftc.teamcode.tests.ShotAlgTest.c;
+
 import com.arcrobotics.ftclib.command.CommandScheduler;
-import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.ParallelCommandGroup;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
@@ -11,6 +12,9 @@ import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -21,7 +25,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.opmodes.commands.FraudInstantCommand;
 import org.firstinspires.ftc.teamcode.opmodes.commands.IntakeCommand;
-import org.firstinspires.ftc.teamcode.opmodes.commands.ManualShooterInputCommand;
 import org.firstinspires.ftc.teamcode.opmodes.commands.PedroFollowCommand;
 import org.firstinspires.ftc.teamcode.opmodes.commands.StopShooter;
 import org.firstinspires.ftc.teamcode.pedropathing.Constants;
@@ -29,7 +32,7 @@ import org.firstinspires.ftc.teamcode.systems.Intake;
 import org.firstinspires.ftc.teamcode.systems.Shooter;
 
 @Autonomous
-public class RedAuto extends OpMode {
+public class RedAutoLimelight extends OpMode {
 
     Follower follower;
 
@@ -51,6 +54,9 @@ public class RedAuto extends OpMode {
 
     public static double p = 0.025, i, d;
 
+    Limelight3A ll3a;
+    double limelightMountAngleDegrees = 10, limelightLensHeightInches = 13.4, goalHeightInches = 29.5, lastTurretTarget = 0;
+
     @Override
     public void init() {
 
@@ -58,6 +64,10 @@ public class RedAuto extends OpMode {
         turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         encoder = hardwareMap.analogInput.get("encoder");
+
+        ll3a = hardwareMap.get(Limelight3A.class, "ll3a");
+        ll3a.setPollRateHz(250);
+        ll3a.start();
 
         follower = Constants.createFollower(hardwareMap);
         intake = new Intake(hardwareMap);
@@ -85,20 +95,25 @@ public class RedAuto extends OpMode {
                                 new WaitCommand(1000),
                                 new IntakeCommand(intake, Intake.flapDown, 1)
                         ),
+                        new FraudInstantCommand(()->{
+//                            shooter.setTargetRPM(3750);
+                            targetDeg = -49;
+                        }),
                         new ParallelCommandGroup(
                                 new FraudInstantCommand(()->{
-                                    targetDeg = -56;
+                                    targetDeg = -49;
+                                    shooter.setHoodAngle(45);
                                 }),
                                 new PedroFollowCommand(follower, Path1),
                                 new IntakeCommand(intake, Intake.flapDown, 1)
                         ),
                         new WaitCommand(200),
                         new ParallelCommandGroup(
-                                new PedroFollowCommand(follower, Path2),
-                                new FraudInstantCommand(()->{
-                                    shooter.setTargetRPM(4400);
-                                    shooter.setHoodAngle(45);
-                                })
+                                new PedroFollowCommand(follower, Path2)//,
+//                                new FraudInstantCommand(()->{
+//                                    shooter.setTargetRPM(4400);
+//                                    shooter.setHoodAngle(45);
+//                                })
                         ),
                         new WaitCommand(300),
                         new IntakeCommand(intake, Intake.flapUp, 1),
@@ -111,8 +126,8 @@ public class RedAuto extends OpMode {
                         new ParallelCommandGroup(
                                 new PedroFollowCommand(follower, Path4),
                                 new FraudInstantCommand(()->{
-                                    shooter.setTargetRPM(4400);
-                                    shooter.setHoodAngle(45);
+//                                    shooter.setTargetRPM(4400);
+//                                    shooter.setHoodAngle(45);
                                     targetDeg = -54;
                                 })
                         ),
@@ -120,27 +135,31 @@ public class RedAuto extends OpMode {
                         new IntakeCommand(intake, Intake.flapUp, 71),
                         new WaitCommand(1000),
                         new ParallelCommandGroup(
-                                new PedroFollowCommand(follower, Path5),
+                                new SequentialCommandGroup(
+                                        new PedroFollowCommand(follower, Path5),
+                                        new WaitCommand(300),
+                                        new PedroFollowCommand(follower, paths.PathHalf)
+                                ),
                                 new IntakeCommand(intake, Intake.flapDown, 1)
                         ),
-                        new WaitCommand(1300),
-                        new FraudInstantCommand(()->{
-                            shooter.setTargetRPM(4300);
-                        }),
+                        new WaitCommand(1000),
+//                        new FraudInstantCommand(()->{
+//                            shooter.setTargetRPM(4300);
+//                        }),
                         new PedroFollowCommand(follower, Path6),
                         new WaitCommand(300),
                         new IntakeCommand(intake, Intake.flapUp, 1),
                         new WaitCommand(1000),
+                        new FraudInstantCommand(()->{
+//                            shooter.setTargetRPM(4400);
+//                            shooter.setHoodAngle(45);
+                            targetDeg = -56.5;
+                        }),
                         new ParallelCommandGroup(
                                 new PedroFollowCommand(follower, Path7),
 
                                 new IntakeCommand(intake, Intake.flapDown, 1)
                         ),
-                        new FraudInstantCommand(()->{
-                            shooter.setTargetRPM(4400);
-                            shooter.setHoodAngle(45);
-                            targetDeg = -56.5;
-                        }),
                         new PedroFollowCommand(follower, Path8),
                         new WaitCommand(300),
                         new IntakeCommand(intake, Intake.flapUp, 1),
@@ -185,11 +204,46 @@ public class RedAuto extends OpMode {
         shooter.runShooter();
         follower.update();
 
-        double turretDeg = analogVoltageToDegrees(encoder.getVoltage());
+        LLResult result = ll3a.getLatestResult();
+        boolean detected = result.getBotposeTagCount() > 0;
+        boolean locked = false;
+        double tX = 0, tY = 0;
 
-        double error = AngleUnit.normalizeDegrees(targetDeg-turretDeg);
+        if (detected) {
+            for (LLResultTypes.FiducialResult result1 : result.getFiducialResults()) {
+                if (result1.getFiducialId() == 24) {
+                    locked = true;
+                    tX = -result1.getTargetXDegrees();
+                    tY = result1.getTargetYDegrees();
+                    break;
+                } else {
+                    locked = false;
+                }
+            }
+        }
 
-        turret.setPower(p * error);
+        telemetry.addData("locked?", locked);
+
+        if (locked) {
+            double angleToGoalRadians = Math.toRadians(limelightMountAngleDegrees + tY);
+            double distanceFromLimelightToGoalInches = (goalHeightInches - limelightLensHeightInches) / Math.tan(angleToGoalRadians);
+            turret.setPower(p*(0-tX));
+
+            double meters = distanceFromLimelightToGoalInches * 0.0254;
+            double turretDeg = analogVoltageToDegrees(encoder.getVoltage());
+
+            shooter.setTargetRPM(getRPMForShot(meters) + c);
+            shooter.setHoodAngle(getHoodAngle(meters));
+            lastTurretTarget = turretDeg;
+        } else {
+            double turretDeg = analogVoltageToDegrees(encoder.getVoltage());
+
+            double error = AngleUnit.normalizeDegrees(targetDeg-turretDeg);
+
+            turret.setPower(p * error);
+        }
+
+
     }
 
     @Override
@@ -208,7 +262,7 @@ public class RedAuto extends OpMode {
         public PathChain Path5;
         public PathChain Path6;
         public PathChain Path7;
-        public PathChain Path8, Path9;
+        public PathChain Path8, Path9, PathHalf;
 
         public Paths(Follower follower) {
             Path1 = follower
@@ -229,6 +283,7 @@ public class RedAuto extends OpMode {
                             new BezierLine(new Pose(123.609, 82.969), new Pose(94.078, 84.094))
                     )
                     .setConstantHeadingInterpolation(Math.toRadians(0))
+                    .setVelocityConstraint(0)
                     .build();
 
             Path3 = follower
@@ -255,7 +310,17 @@ public class RedAuto extends OpMode {
             Path5 = follower
                     .pathBuilder()
                     .addPath(
-                            new BezierLine(new Pose(88.172, 80), new Pose(131, 61))
+                            new BezierLine(new Pose(88.172, 80), new Pose(125, 65))
+                    )
+                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
+                    .setVelocityConstraint(10)
+                    .setTranslationalConstraint(2)
+                    .build();
+
+            PathHalf = follower
+                    .pathBuilder()
+                    .addPath(
+                            new BezierLine(new Pose(125, 65), new Pose(135, 53))
                     )
                     .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(50))
                     .build();
@@ -263,7 +328,7 @@ public class RedAuto extends OpMode {
             Path6 = follower
                     .pathBuilder()
                     .addPath(
-                            new BezierLine(new Pose(131, 61), new Pose(88.172, 80))
+                            new BezierLine(new Pose(135, 53), new Pose(88.172, 80))
                     )
                     .setLinearHeadingInterpolation(Math.toRadians(50), Math.toRadians(0))
                     .build();
@@ -274,7 +339,7 @@ public class RedAuto extends OpMode {
                             new BezierCurve(
                                     new Pose(88.172, 78.609),
                                     new Pose(70, 35.516),
-                                    new Pose(135, 37)
+                                    new Pose(135, 33)
                             )
                     )
                     .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
@@ -283,7 +348,7 @@ public class RedAuto extends OpMode {
             Path8 = follower
                     .pathBuilder()
                     .addPath(
-                            new BezierLine(new Pose(135, 37), new Pose(84.656, 73.828))
+                            new BezierLine(new Pose(135, 33), new Pose(84.656, 73.828))
                     )
                     .setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
@@ -300,5 +365,14 @@ public class RedAuto extends OpMode {
 
     private double analogVoltageToDegrees(double voltage) {
         return voltage * (360/3.3);
+    }
+    public double getRPMForShot(double meters) {
+//        return (211.43 * meters) + 1177;
+        return (227.87*meters) + 1382.7;
+    }
+
+    public double getHoodAngle(double meters) {
+//        return (-8.8 * meters) + 76.16;
+        return (-4.8701*meters) + 59.754;
     }
 }

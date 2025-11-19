@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class Intake {
 
     private DcMotor intake;
-    private Servo flapL, flapR;
+    private Servo flapL, flapR, pto;
 
     public static double shotDelay = 1.2, shotTransferAllowance = 0.4;
     public static double flapActuationTime = 0.8;
@@ -18,12 +18,13 @@ public class Intake {
     private boolean intakeActivityFlag = false;
     private boolean shootingFlag = false;
 
-    public static double flapUp = 0.81, flapDown = 0.89;
+    public static double flapUp = 0.81, flapDown = 0.89, ptoEngaged = 0.36, ptoDisengaged = 0.265;
 
     public Intake(HardwareMap hardwareMap) {
         intake = hardwareMap.dcMotor.get("intake");
         flapL = hardwareMap.servo.get("lFlap");
         flapR = hardwareMap.servo.get("rFlap");
+        pto = hardwareMap.servo.get("pto");
         flapR.setDirection(Servo.Direction.REVERSE);
     }
 
@@ -57,6 +58,14 @@ public class Intake {
     public void setFlap(double pos) {
         flapR.setPosition(pos);
         flapL.setPosition(pos);
+    }
+
+    public void setPtoEngaged(boolean engaged) {
+        if (engaged) {
+            pto.setPosition(ptoEngaged);
+        } else {
+            pto.setPosition(ptoDisengaged);
+        }
     }
 
 }

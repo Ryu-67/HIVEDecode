@@ -63,6 +63,8 @@ public class RedTele extends OpMode {
         encoder = hardwareMap.analogInput.get("encoder");
 
         shooter = new Shooter(hardwareMap, telemetry);
+
+        intake.setPtoEngaged(false);
     }
 
     ElapsedTime surveyTimer = new ElapsedTime();
@@ -84,9 +86,11 @@ public class RedTele extends OpMode {
 
         if (gamepad1.left_bumper) {
             intake.setFlap(Intake.flapUp);
+            intake.setPtoEngaged(true);
             intake.setActive(true);
         } else {
             intake.setFlap(Intake.flapDown);
+            intake.setPtoEngaged(false);
             intake.setActive(controller.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER) > 0.5);
             intake.setReverse(controller.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.5);
         }
